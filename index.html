@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatAi-ThanzX</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,sans-serif;}
+body{min-height:100vh;background:linear-gradient(180deg,#2da1d3,#8ed0e5);display:flex;justify-content:center;align-items:center;overflow:hidden;}
+.app{width:100%;max-width:420px;padding:40px 25px;text-align:center;}
+.headerBox{display:flex;flex-direction:column;align-items:center;margin-bottom:40px;}
+.logo{width:150px;margin-bottom:8px;}
+h1{color:white;font-size:24px;font-weight:bold;}
+.menu{display:flex;flex-direction:column;gap:18px;}
+.card{background:white;padding:18px;border-radius:25px;font-weight:bold;color:#2c3e70;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.2);}
+.card:hover{transform:scale(1.05);}
+.fullscreen{position:fixed;inset:0;background:linear-gradient(180deg,#2da1d3,#8ed0e5);z-index:999;display:flex;flex-direction:column;}
+.back{padding:15px;color:white;font-weight:bold;cursor:pointer;}
+.chatArea{flex:1;padding:15px;overflow-y:auto;padding-bottom:95px;}
+.bubble{padding:10px 15px;border-radius:15px;margin-bottom:10px;max-width:80%;font-size:14px;word-wrap:break-word;}
+.userBubble{background:white;margin-left:auto;color:#2c3e70;}
+.aiBubble{background:rgba(255,255,255,.3);color:white;}
+.inputBar{position:fixed;bottom:0;left:0;right:0;max-width:420px;margin:auto;display:flex;padding:10px;background:linear-gradient(180deg,#4fb3d9,#2da1d3);}
+.inputBar input[type="text"]{flex:1;padding:10px;border:none;border-radius:12px;}
+.inputBar button{margin-left:6px;padding:10px 14px;border:none;border-radius:12px;background:white;color:#2da1d3;font-weight:bold;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="headerBox">
+    <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/4/4d/OpenAI_Logo.svg">
+    <h1>ChatAi-ThanzX</h1>
+  </div>
+  <div class="menu">
+    <div class="card" onclick="openAI()">💬 Chat AI</div>
+  </div>
+</div>
+
+<script>
+const API_URL = "http://localhost:3000/api/chat";
+
+function createPage() {
+  const page = document.createElement("div");
+  page.className = "fullscreen";
+  page.innerHTML = `
+    <div class="back" onclick="this.parentElement.remove()">⬅ Back</div>
+    <div class="chatArea" id="aiBox"></div>
+    <div class="inputBar">
+      <input type="text" id="aiInput" placeholder="Tulis pesan...">
+      <button onclick="sendAI()">Kirim</button>
+    </div>`;
+  document.body.appendChild(page);
+}
+
+function openAI() { createPage(); }
+
+function renderAI(messages) {
+  const box = document.getElementById("aiBox");
+  box.innerHTML = "";
+  messages.forEach(msg => {
+    const div = document.createElement("div");
+    div.className = "bubble " + (msg.role === "user" ? "userBubble" : "aiBubble");
+    div.innerText = msg.text;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendAI() {
+  const input = document.getElementById("aiInput");
+  if (!input.value) return;
+
+  const messages = JSON.parse(localStorage.getItem("aiPrivate") || "[]");
+  messages.push({ role: "user", text: input.value });
+  renderAI(messages);
+  localStorage.setItem("aiPrivate", JSON.stringify(messages));
+
+  const lastBubble = document.getElementById("aiBox").lastChild;
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ prompt: input.value })
+    });
+    const data = await res.json();
+    messages.push({ role: "ai", text: data.text });
+    localStorage.setItem("aiPrivate", JSON.stringify(messages));
+    renderAI(messages);
+  } catch (err) {
+    console.error(err);
+    messages.push({ role: "ai", text: "(Gagal terhubung ke AI)" });
+    renderAI(messages);
+  }
+
+  input.value = "";
+}
+</script>
+</body>
+</html>
